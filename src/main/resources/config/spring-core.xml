@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:aop="http://www.springframework.org/schema/aop"
+    xmlns:tx="http://www.springframework.org/schema/tx"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+
+    <!-- 打开配置的注解 -->
+    <tx:annotation-driven/>
+    <!-- 打开注解 -->
+    <context:annotation-config/>
+    <!-- 扫描spring注解 -->
+    <context:component-scan base-package="com.caodaxing.redis"/>
+    <!-- 扫描mq消息注解 -->
+    <context:component-scan base-package="com.caodaxing.redis.**.activemq"/>
+    <!-- 扫描cache缓存注解 -->
+    <context:component-scan base-package="com.caodaxing.redis.**.acahe" />
+    <!-- 打开自动代理 -->
+    <aop:aspectj-autoproxy proxy-target-class="true" />
+    
+    <!-- 扫描配置文件,获取配置文件的值 -->
+	<context:property-placeholder location="classpath:config.properties" />
+
+		
+	<import resource="spring-mybatis.xml"/>
+	<import resource="spring-redis.xml"/>
+	
+	<!-- <bean id="redis" class="com.caodaxingcrm.init.RedisInit" init-method="init" ></bean> -->
+
+</beans>
