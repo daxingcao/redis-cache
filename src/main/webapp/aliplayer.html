@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+<link rel="stylesheet" href="css/bootstrap.min.css" />
+<link rel="stylesheet" href="css/bootstrap-theme.min.css" />
+<link rel="stylesheet" href="css/bootstrapValidator.min.css" />
+<link rel="stylesheet" href="//g.alicdn.com/de/prismplayer/2.7.2/skins/default/aliplayer-min.css" />
+<script charset="utf-8" type="text/javascript" src="//g.alicdn.com/de/prismplayer/2.7.2/aliplayer-min.js"></script>
+<script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+<script type="text/javascript" src="js/aliyun-oss-sdk-5.2.0.min.js"></script>
+<script type="text/javascript" src="js/aliyun-upload-sdk-1.4.0.min.js"></script>
+<script type="text/javascript" src="js/es6-promise.min.js"></script>
+<script type="text/javascript" src="js/bootstrap.min.js"></script>
+</head>
+<body>
+	<form action="">
+		<div id="freeShowVideo" class="form-group">
+		    <input type="hidden" id="aliyunVideoId" name="freeAliyunVideoId"  value="" />
+		    <div class="col-sm-9 ms-from-group-input" style="line-height:30px; width:500px;">
+		        <input type="file" class="btn vediofiles" name="file" onchange="selectFile(this)" style="float: left;width: 200px;padding: 0;margin-top: 3px;" multiple/>
+		        <button id="aliyunUploadStart" type="button" onclick="start(this)" class="btn btn-success aliyunUploadStart">开始上传</button>
+		        <button id="aliyunUploadStop" disabled="disabled" type="button" onclick="stop()" class="btn btn-danger aliyunUploadStop">停止上传</button>
+		        <div id="uploadProgress" class="uploadProgress progress progress-striped active" style="display: block;margin-top: 10px">
+		            <div id="progress-bar" class="progress-bar progress-bar-success" role="progressbar" aria-valuenow="60"
+		                 aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
+		                <span id="progressNumber" class="progressNumber">0%</span>
+		            </div>
+		        </div>
+		    </div>
+		</div>
+	</form>
+	<div style="clear: both;">
+		<div class="prism-player" id="J_prismPlayer" style="position: absolute"></div>
+		<div style="position: relative;top: 320px;">
+			<button onclick="playVedio()">播放</button>
+		</div>
+	</div>
+</body>
+<script type="text/javascript">
+	var uploader;
+	var fileName;
+	var videoId;
+	var uploadAddress;
+	var uploadAuth;
+	$(function () {
+		initAliplayer();
+	});
+	function initAliplayer() {
+		uploader = new AliyunUpload.Vod({
+			// 文件上传失败
+            'onUploadFailed': function (uploadInfo, code, message) {
+            	console.log("onUploadFailed: file:" + uploadInfo.file.name + ",code:" + code + ", message:" + message);
+            },
+            // 文件上传完成
+            'onUploadSucceed': function (uploadInfo) {
+				//上传完成后执行你需要的操作
+            	$("#aliyunVideoId").val(videoId);
+                $("#aliyunUploadStop").attr("disabled", "disabled");
+            },
+            // 文件上传进度
+            'onUploadProgress': function (uploadInfo, totalSize, loadedPercent) {
+            	console.log("onUploadProgress:file:" + uploadInfo.file.name + ", fileSize:" + totalSize + ", percent:" + (loadedPercent * 100.00).toFixed(0) + "%");
+                $("#progress-bar").css("width", (loadedPercent * 100.00).toFixed(0) + "%");
+                $("#progressNumber").text((loadedPercent * 100.00).toFixed(0) + "%");
+            },
+            // 过期时触发函数
+            'onUploadTokenExpired': function (uploadInfo) {
+            	console.log("onUploadTokenExpired");
+                // 实现时，根据uploadInfo.videoId从新获取UploadAuth
+                //实际环境中调用点播的刷新上传凭证接口，获取凭证
+                //https://help.aliyun.com/document_detail/55408.html?spm=a2c4g.11186623.6.630.BoYYcY
+                //获取上传凭证后，调用setUploadAuthAndAddress
+                refreshAuth(uploadInfo.videoId);
+                uploader.resumeUploadWithAuth(uploadAuth);
+            },
+            //取消上传
+            'onUploadCanceled': function (uploadInfo) {
+                alert("视频上传已取消");
+                $("#aliyunUploadStart").removeAttr("disabled");
+            },
+            // 开始上传
+            'onUploadstarted': function (uploadInfo) {
+            	console.log("开始上传-uploadInfo.videoId：" + uploadInfo.videoId);
+                if (!uploadInfo.videoId)//这个文件没有上传
+                {
+                    $("#progress-bar").css("width", "0%");
+                    console.log("createAuth(1)");
+                    //consoleLog(uploadAuth+"-"+uploadAddress+"-"+videoId);
+                    //实际环境中调用调用点播的获取上传凭证接口
+                    //https://help.aliyun.com/document_detail/55407.html?spm=a2c4g.11186623.6.629.CH7i3X
+                    createAuth();
+                    //获取上传凭证后，调用setUploadAuthAndAddress
+                    uploader.setUploadAuthAndAddress(uploadInfo, uploadAuth, uploadAddress, videoId);
+                } else {//如果videoId有值，根据videoId刷新上传凭证
+                    //实际环境中调用点播的刷新上传凭证接口，获取凭证
+                    //https://help.aliyun.com/document_detail/55408.html?spm=a2c4g.11186623.6.630.BoYYcY
+                    refreshAuth(uploadInfo.videoId);
+                    //获取上传凭证后，调用setUploadAuthAndAddress
+                    uploader.setUploadAuthAndAddress(uploadInfo, uploadAuth, uploadAddress);
+                }
+                console.log("onUploadStarted:" + uploadInfo.file.name + ", endpoint:" + uploadInfo.endpoint + ", bucket:" + uploadInfo.bucket + ", object:" + uploadInfo.object);
+            },
+            'onUploadEnd': function (uploadInfo) {
+                console.log("onUploadEnd: uploaded all the files");
+                $("#aliyunUploadStart").removeAttr("disabled");
+            }
+		})
+	}
+	var playAuth;
+	var coverURL;
+	//初始化播放器
+    var player = new Aliplayer({
+		    id: 'J_prismPlayer',
+		    width: '400px',
+		    autoplay: false,
+		    playsinline:true,
+		    vid : '',
+		    playauth : '',
+		    cover: 'http://liveroom-img.oss-cn-qingdao.aliyuncs.com/logo.png'
+    	},function(player){
+        	console.log('播放器创建好了。')
+   		}
+    );
+	//点击播放时
+    function playVedio(){
+	    vedioId = $("#aliyunVideoId").val();
+	    //获取凭证
+	    getPlayAuth(vedioId); 
+	    console.log("vedioId:"+vedioId);
+	    console.log("playAuth:"+playAuth);
+	    console.log("coverURL:"+coverURL);
+	    
+	    //player.dispose(); //销毁
+    	//$('#J_prismPlayer').empty();//id为html里指定的播放器的容器id
+    	//重新创建
+    	player = new Aliplayer(
+    		{ //对象传参
+	            id: 'J_prismPlayer',
+	            width: '400px',
+	            autoplay: true,
+	            playsinline:true,
+	            vid : vedioId,
+	            playauth : playAuth,
+	            cover: coverURL        
+            },
+            function(player){ //回调函数
+                  console.log('播放器创建好了。')
+        	}
+        );
+    }
+    function getPlayAuth(vedioId){
+  	  $.ajax({
+            type : "POST",
+            url : "aliyun/video/getPlayAuth",
+            data : {"videoId" : vedioId},
+            async : false,
+            success : function(data) {
+            	console.log(data);
+                if (data.success) {
+              	 playAuth = data.response.playAuth;
+              	 coverURL = data.response.videoMeta.coverURL;
+                } else {
+                	 alert(data.resultMsg);
+                }
+                
+            }
+   		 });
+    }
+	
+	function refreshAuth(videoId) {
+        $.ajax({
+            type: "POST",
+            url: "aliyun/video/refreshToken",
+            data: {"vedioId": videoId},
+            async: false,
+            success: function (data) {
+                console.log(data);
+                if (data.result) {
+	                uploadAddress = data.resultData.uploadAddress;
+	                uploadAuth = data.resultData.uploadAuth;
+                } else {
+                    alert(data.resultMsg);
+                }
+            }
+        });
+    }
+	function createAuth() {
+	    $.ajax({
+	        type: "POST",
+	        url: "aliyun/video/getToken",
+	        data: {"fileName": fileName},
+	        async: false,
+	        success: function (data) {
+	            console.log(data);
+	            if (data.success) {
+	                videoId = data.response.videoId;
+	                uploadAddress = data.response.uploadAddress;
+	                uploadAuth = data.response.uploadAuth;
+	            } else {
+	                alert(data.resultMsg);
+	            }
+	
+	        }
+	    });
+    }
+	
+	var selectFile = function (obj) {
+        // var target=obj;
+        //firefox没有window.event对象
+        if (!obj.files || obj.files.length == 0 || !obj.files[0]) {
+            return;
+        }
+        //清除历史
+        clearList();
+
+        var userData = '{"Vod":{"UserData":{"IsShowWaterMark":"false","Priority":"7"}}}';
+        
+        fileName = obj.files[0].name;
+        uploader.addFile(obj.files[0], null, null, null, userData);
+
+    };
+    function start(obj, num) {
+        if ($(obj).siblings(".vediofiles").val() == "") {
+            alert("请选择要上传的视频");
+            return;
+        }
+
+        console.log("start upload.");
+        $("#aliyunUploadStop").removeAttr('disabled');
+        uploader.startUpload();
+    }
+    function clearList() {
+    	console.log("clean upload list.");
+        uploader.cleanList();
+    }
+</script>
+</html>

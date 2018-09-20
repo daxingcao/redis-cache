@@ -16,7 +16,34 @@
     <poi.version>3.16</poi.version>
   </properties>
   
+  <!-- 阿里视频云播放maven仓库 -->
+  <repositories>
+  	<repository>
+  		<id>sonatype-nexus-staging</id>
+        <name>Sonatype Nexus Staging</name>
+        <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        <releases>
+                <enabled>true</enabled>
+        </releases>
+        <snapshots>
+                <enabled>true</enabled>
+        </snapshots>
+  	</repository>
+  </repositories>
+  
   <dependencies>
+  	<!-- 阿里视频云依赖jar包 -->
+  	<dependency>
+        <groupId>com.aliyun</groupId>
+        <artifactId>aliyun-java-sdk-core</artifactId>
+        <version>3.2.2</version>
+  	</dependency>
+  	<dependency>
+        <groupId>com.aliyun</groupId>
+        <artifactId>aliyun-java-sdk-vod</artifactId>
+        <version>2.7.0</version>
+  	</dependency>
+  	<!-- ======结束======= -->
   
   	<dependency>
 		<groupId>org.mybatis.generator</groupId>
