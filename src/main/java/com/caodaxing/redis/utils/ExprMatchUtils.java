@@ -21,6 +21,10 @@ public class ExprMatchUtils {
 	private static final ScriptEngineManager manager = new ScriptEngineManager();
 	private static ThreadLocal<ScriptEngine> threadLocal = new ThreadLocal<>();
 	
+	/**
+	 * 将逻辑表达式中的参数放入ScriptEngine对象中
+	 * @param params
+	 */
 	public static void setMatchParam(Map<String, Object> params) {
 		ScriptEngine engine = getScriptEngine();
 		Set<Entry<String, Object>> entrySet = params.entrySet();
@@ -37,6 +41,14 @@ public class ExprMatchUtils {
 		}
 	}
 	
+	/**
+	 * 验证逻辑表达式是否成立
+	 * 使用该方法前,请确认逻辑表达式中的参数已经放入ScriptEngine对象中
+	 * 可使用ScriptEngine()方法放入参数
+	 * @param expr
+	 * @return
+	 * @throws ScriptException
+	 */
 	public static boolean verifyExpr(String expr) throws ScriptException {
 		Boolean eval = false;
 		ScriptEngine engine = getScriptEngine();
@@ -45,6 +57,18 @@ public class ExprMatchUtils {
 		}
 		eval = (boolean)engine.eval(expr);
 		return eval;
+	}
+	
+	/**
+	 * 传入表达式参数和表达式,验证逻辑表达式是否成立
+	 * @param params
+	 * @param expr
+	 * @return
+	 * @throws ScriptException
+	 */
+	public static boolean verifyExper(Map<String, Object> params,String expr) throws ScriptException {
+		setMatchParam(params);
+		return verifyExpr(expr);
 	}
 	
 	private static ScriptEngine getScriptEngine() {
